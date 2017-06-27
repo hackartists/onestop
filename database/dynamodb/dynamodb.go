@@ -10,23 +10,18 @@ import (
 )
 
 type DynamoDBContext struct {
-	sess  *session.Session
-	table string
+	sess *session.Session
 }
 
-func New(region string, table string) (DynamoDBContext, error) {
+func New(region string) (*DynamoDBContext, error) {
 	// TODO: aws.Config have to be added.
 	sess, err := a.Connect(region)
 
-	return DynamoDBContext{sess: sess, table: table}, err
+	return &DynamoDBContext{sess: sess}, err
 }
 
 func (c DynamoDBContext) Session() interface{} {
 	return c.sess
-}
-
-func (c DynamoDBContext) TableName() string {
-	return c.table
 }
 
 func (c DynamoDBContext) Insert(data database.OnestopDataContext) error {
@@ -34,8 +29,8 @@ func (c DynamoDBContext) Insert(data database.OnestopDataContext) error {
 	svc := dynamodb.New(sess)
 
 	params := &dynamodb.PutItemInput{
-		Item:      data.DynamoAttribute(),
-		TableName: aws.String(d.TableName()),
+		Item:      data.Data().(map[string]*dynamodb.AttributeValue),
+		TableName: aws.String(data.TableName()),
 	}
 
 	_, err := svc.PutItem(params)
@@ -43,17 +38,17 @@ func (c DynamoDBContext) Insert(data database.OnestopDataContext) error {
 	return err
 }
 
-func (c DynamoDBContext) Select(data data.baseOnestopDataContext) ([]interface{}, error) {
+func (c DynamoDBContext) Select(data database.OnestopDataContext) ([]interface{}, error) {
 	sess := c.sess
 
 	svc := dynamodb.New(sess)
 
 	params := &dynamodb.QueryInput{
-		TableName: aws.String(c.TableName()),
+		TableName: aws.String(data.TableName()),
 		//Limit:                     aws.Long(10),
 		//FilterExpression:          data.DynamoKeyConditionExpression(),
 		//ExpressionAttributeValues: data.DynamoExpressionValues(),
-		KeyConditions: data.Conditions(),
+		KeyConditions: data.Conditions().(map[string]*dynamodb.Condition),
 	}
 
 	resp, err := svc.Query(params)

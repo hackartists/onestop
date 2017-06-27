@@ -8,22 +8,17 @@ import (
 )
 
 type CassandraContext struct {
-	sess  *gocql.Session
-	table string
+	sess *gocql.Session
 }
 
-func New(host string, keyspace string, table string) (CassandraContext, error) {
+func New(host string, keyspace string) (*CassandraContext, error) {
 	sess, err := connect(host, keyspace)
 
-	return CassandraContext{sess: sess, table: table}, err
+	return &CassandraContext{sess: sess}, err
 }
 
 func (c CassandraContext) Session() interface{} {
 	return c.sess
-}
-
-func (c CassandraContext) TableName() string {
-	return c.table
 }
 
 func (c CassandraContext) Insert(data database.OnestopDataContext) error {
@@ -35,7 +30,7 @@ func (c CassandraContext) Insert(data database.OnestopDataContext) error {
 		return err
 	}
 	//query := "INSERT INTO ? JSON '?'"
-	query := fmt.Sprintf("INSERT INTO %s JSON '%s'", c.TableName(), j)
+	query := fmt.Sprintf("INSERT INTO %s JSON '%s'", data.TableName(), j)
 	err = c.sess.Query(query).Exec()
 
 	if err != nil {
@@ -46,7 +41,7 @@ func (c CassandraContext) Insert(data database.OnestopDataContext) error {
 }
 
 func (c CassandraContext) Select(data database.OnestopDataContext) ([]interface{}, error) {
-	query := "SELECT JSON * FROM " + c.TableName()
+	query := "SELECT JSON * FROM " + data.TableName()
 	iter := c.sess.Query(query).Iter()
 	defer iter.Close()
 	//TODO: Converting iter into result array
